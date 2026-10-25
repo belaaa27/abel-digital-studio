@@ -22,11 +22,11 @@ export default function AdminDashboardPage() {
   // Toast / Banner state
   const [toastMessage, setToastMessage] = useState("");
 
-  // Create Project Modal state
+  // Create / Edit Project Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState(null); // null = create mode, string = edit mode ID
   const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState([]);
-  const [formSuccess, setFormSuccess] = useState("");
 
   // Form Fields
   const [formData, setFormData] = useState({
@@ -70,7 +70,6 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     async function verifyAndFetchData() {
       try {
-        // 1. Verify session
         const sessionRes = await fetch("/api/auth/session", { method: "GET" });
         if (!sessionRes.ok) {
           router.replace("/admin/login");
@@ -86,7 +85,6 @@ export default function AdminDashboardPage() {
         setAdmin(sessionData.admin);
         setStatus("ready");
 
-        // 2. Fetch initial projects
         await fetchProjects();
       } catch (err) {
         console.error("Dashboard initialization error:", err);
@@ -108,8 +106,9 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Helper to open modal and clear stale form state
-  const openModal = () => {
+  // Open modal for Create mode
+  const openCreateModal = () => {
+    setEditingProjectId(null);
     setFormData({
       title: "",
       slug: "",
@@ -122,11 +121,28 @@ export default function AdminDashboardPage() {
       published: false,
     });
     setFormErrors([]);
-    setFormSuccess("");
     setIsModalOpen(true);
   };
 
-  // Auto-slugify generator for quick slug suggestions
+  // Open modal for Edit mode
+  const openEditModal = (project) => {
+    setEditingProjectId(project.id);
+    setFormData({
+      title: project.title || "",
+      slug: project.slug || "",
+      category: project.category || "",
+      description: project.description || "",
+      liveUrl: project.liveUrl || "",
+      githubUrl: project.githubUrl || "",
+      imageUrl: project.imageUrl || "",
+      featured: Boolean(project.featured),
+      published: Boolean(project.published),
+    });
+    setFormErrors([]);
+    setIsModalOpen(true);
+  };
+
+  // Auto-slugify generator for quick slug suggestions during creation
   const handleTitleChange = (e) => {
     const titleVal = e.target.value;
     const autoSlug = titleVal
@@ -140,7 +156,8 @@ export default function AdminDashboardPage() {
       ...prev,
       title: titleVal,
       slug:
-        prev.slug === "" || prev.slug === autoSlug.slice(0, -1)
+        !editingProjectId &&
+        (prev.slug === "" || prev.slug === autoSlug.slice(0, -1))
           ? autoSlug
           : prev.slug,
     }));
@@ -152,24 +169,27 @@ export default function AdminDashboardPage() {
 
     setSubmitting(true);
     setFormErrors([]);
-    setFormSuccess("");
 
-    // Prepare API payload matching POST /api/admin/projects expectation
     const payload = {
       title: formData.title.trim(),
       slug: formData.slug.trim(),
       category: formData.category.trim(),
       description: formData.description.trim(),
-      liveUrl: formData.liveUrl.trim() || undefined,
-      githubUrl: formData.githubUrl.trim() || undefined,
-      imageUrl: formData.imageUrl.trim() || undefined,
+      liveUrl: formData.liveUrl.trim() || null,
+      githubUrl: formData.githubUrl.trim() || null,
+      imageUrl: formData.imageUrl.trim() || null,
       featured: formData.featured,
       published: formData.published,
     };
 
     try {
-      const response = await fetch("/api/admin/projects", {
-        method: "POST",
+      const endpoint = editingProjectId
+        ? `/api/admin/projects/${editingProjectId}`
+        : "/api/admin/projects";
+      const method = editingProjectId ? "PATCH" : "POST";
+
+      const response = await fetch(endpoint, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -191,23 +211,25 @@ export default function AdminDashboardPage() {
         } else {
           setFormErrors([
             resData.error ||
-              "Failed to create project. Please review your input.",
+              "Failed to save project. Please review your input.",
           ]);
         }
         return;
       }
 
-      // Successful creation
       setIsModalOpen(false);
-      setToastMessage(`Project "${payload.title}" created successfully!`);
+      setToastMessage(
+        editingProjectId
+          ? `Project "${payload.title}" updated successfully!`
+          : `Project "${payload.title}" created successfully!`,
+      );
       setTimeout(() => setToastMessage(""), 5000);
 
-      // Refresh list & stats
       await fetchProjects();
     } catch (err) {
-      console.error("Create project submission error:", err);
+      console.error("Project submission error:", err);
       setFormErrors([
-        "Network error. Please check your connection and try again without losing your form input.",
+        "Network error. Please check your connection and try again.",
       ]);
     } finally {
       setSubmitting(false);
@@ -308,7 +330,7 @@ export default function AdminDashboardPage() {
 
           <button
             type="button"
-            onClick={openModal}
+            onClick={openCreateModal}
             className="inline-flex items-center justify-center rounded-full bg-ink-forest px-5 py-2.5 font-mono text-xs uppercase tracking-wider text-warm-ivory transition-opacity hover:opacity-90 shadow-sm"
           >
             + Create Project
@@ -435,6 +457,7 @@ export default function AdminDashboardPage() {
                       <th className="py-3.5 px-6">Status</th>
                       <th className="py-3.5 px-6">Featured</th>
                       <th className="py-3.5 px-6">Created</th>
+                      <th className="py-3.5 px-6 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ink-forest/10 font-mono text-xs">
@@ -495,6 +518,15 @@ export default function AdminDashboardPage() {
                               )
                             : "—"}
                         </td>
+                        <td className="py-4 px-6 text-right">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(project)}
+                            className="rounded-lg border border-ink-forest/20 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-ink-forest hover:bg-ink-forest hover:text-warm-ivory transition-colors"
+                          >
+                            Edit
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -505,17 +537,19 @@ export default function AdminDashboardPage() {
         </section>
       </div>
 
-      {/* CREATE PROJECT MODAL */}
+      {/* CREATE / EDIT PROJECT MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 sm:p-6 backdrop-blur-sm overflow-y-auto">
           <div className="w-full max-w-2xl rounded-2xl border border-ink-forest/20 bg-warm-ivory p-6 sm:p-8 shadow-2xl space-y-6 my-8">
             <div className="flex items-center justify-between border-b border-ink-forest/10 pb-4">
               <div>
                 <span className="font-mono text-[10px] uppercase tracking-wider text-ink-forest/60">
-                  New Record
+                  {editingProjectId ? "Modify Record" : "New Record"}
                 </span>
                 <h2 className="font-serif text-2xl text-ink-forest font-light">
-                  Create Portfolio Project
+                  {editingProjectId
+                    ? "Edit Portfolio Project"
+                    : "Create Portfolio Project"}
                 </h2>
               </div>
               <button
@@ -701,7 +735,11 @@ export default function AdminDashboardPage() {
                   disabled={submitting}
                   className="rounded-full bg-ink-forest px-6 py-2 font-mono text-xs uppercase tracking-wider text-warm-ivory transition-opacity hover:opacity-90 disabled:opacity-50"
                 >
-                  {submitting ? "Saving..." : "Create Project"}
+                  {submitting
+                    ? "Saving..."
+                    : editingProjectId
+                      ? "Save Changes"
+                      : "Create Project"}
                 </button>
               </div>
             </form>
