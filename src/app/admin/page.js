@@ -1,38 +1,71 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [admin, setAdmin] = useState(null);
-  const [status, setStatus] = useState("loading");
+  const [status, setStatus] = useState("loading"); // "loading" | "ready" | "error"
+  const [errorMessage, setErrorMessage] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
 
+  // Projects state
+  const [projects, setProjects] = useState([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+  const [projectsError, setProjectsError] = useState("");
+
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterTab, setFilterTab] = useState("all"); // "all" | "published" | "drafts"
+
   useEffect(() => {
-    async function verifyAdminSession() {
+    async function verifyAndFetchData() {
       try {
-        const response = await fetch("/api/auth/session", { method: "GET" });
-        if (!response.ok) {
+        // 1. Verify session
+        const sessionRes = await fetch("/api/auth/session", { method: "GET" });
+        if (!sessionRes.ok) {
           router.replace("/admin/login");
           return;
         }
 
-        const data = await response.json();
-        if (data.authenticated) {
-          setAdmin(data.admin);
-          setStatus("ready");
-        } else {
+        const sessionData = await sessionRes.json();
+        if (!sessionData.authenticated) {
           router.replace("/admin/login");
+          return;
         }
+
+        setAdmin(sessionData.admin);
+        setStatus("ready");
+
+        // 2. Fetch projects
+        const projectsRes = await fetch("/api/admin/projects", {
+          method: "GET",
+        });
+        if (projectsRes.status === 401) {
+          router.replace("/admin/login");
+          return;
+        }
+
+        if (!projectsRes.ok) {
+          throw new Error("Failed to load portfolio projects.");
+        }
+
+        const projectsData = await projectsRes.json();
+        setProjects(projectsData.projects || []);
       } catch (err) {
-        console.error("Session verification error:", err);
-        router.replace("/admin/login");
+        console.error("Dashboard initialization error:", err);
+        setProjectsError(
+          err.message ||
+            "An unexpected error occurred while fetching projects.",
+        );
+      } finally {
+        setProjectsLoading(false);
       }
     }
 
-    verifyAdminSession();
+    verifyAndFetchData();
   }, [router]);
 
   const handleLogout = async () => {
@@ -45,6 +78,32 @@ export default function AdminDashboardPage() {
       router.replace("/admin/login");
     }
   };
+
+  // Calculated Statistics
+  const stats = useMemo(() => {
+    const total = projects.length;
+    const published = projects.filter((p) => p.published).length;
+    const drafts = projects.filter((p) => !p.published).length;
+    const featured = projects.filter((p) => p.featured).length;
+    return { total, published, drafts, featured };
+  }, [projects]);
+
+  // Filtered & Searched Projects
+  const filteredProjects = useMemo(() => {
+    return projects.filter((project) => {
+      const matchesSearch =
+        project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.slug.toLowerCase().includes(searchQuery.toLowerCase());
+
+      if (filterTab === "published") {
+        return matchesSearch && project.published;
+      }
+      if (filterTab === "drafts") {
+        return matchesSearch && !project.published;
+      }
+      return matchesSearch;
+    });
+  }, [projects, searchQuery, filterTab]);
 
   if (status === "loading") {
     return (
@@ -61,74 +120,246 @@ export default function AdminDashboardPage() {
 
   return (
     <main className="min-h-screen bg-warm-ivory text-ink-forest flex flex-col justify-between p-6 lg:p-12">
-      {/* Header */}
-      <header className="flex items-center justify-between border-b border-ink-forest/10 pb-6">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-sm font-semibold tracking-wider text-ink-forest"
-        >
-          <span className="font-mono text-xs uppercase tracking-widest text-ink-forest/60">
-            ABEL /
-          </span>
-          <span className="tracking-tight uppercase">DIGITAL</span>
-        </Link>
-
-        <div className="flex items-center gap-4">
-          <span className="hidden sm:inline-block font-mono text-xs text-ink-forest/60">
-            {admin?.email}
-          </span>
-          <button
-            onClick={handleLogout}
-            disabled={loggingOut}
-            className="rounded-full border border-ink-forest/20 px-4 py-1.5 font-mono text-xs uppercase tracking-wider text-ink-forest transition-colors hover:bg-ink-forest hover:text-warm-ivory disabled:opacity-50"
+      <div className="space-y-10">
+        {/* Header */}
+        <header className="flex items-center justify-between border-b border-ink-forest/10 pb-6">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm font-semibold tracking-wider text-ink-forest"
           >
-            {loggingOut ? "Logging out..." : "Logout"}
+            <span className="font-mono text-xs uppercase tracking-widest text-ink-forest/60">
+              ABEL /
+            </span>
+            <span className="tracking-tight uppercase">DIGITAL</span>
+          </Link>
+
+          <div className="flex items-center gap-4">
+            <span className="hidden sm:inline-block font-mono text-xs text-ink-forest/60">
+              {admin?.email}
+            </span>
+            <button
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className="rounded-full border border-ink-forest/20 px-4 py-1.5 font-mono text-xs uppercase tracking-wider text-ink-forest transition-colors hover:bg-ink-forest hover:text-warm-ivory disabled:opacity-50"
+            >
+              {loggingOut ? "Logging out..." : "Logout"}
+            </button>
+          </div>
+        </header>
+
+        {/* Studio Welcome & Quick Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-ink-forest/10 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-ink-forest mb-2">
+              Studio Portal
+            </div>
+            <h1 className="font-serif text-3xl sm:text-4xl text-ink-forest font-light tracking-tight">
+              Project Management
+            </h1>
+          </div>
+
+          <button
+            type="button"
+            disabled
+            title="Project creation module coming soon"
+            className="inline-flex items-center justify-center rounded-full bg-ink-forest px-5 py-2.5 font-mono text-xs uppercase tracking-wider text-warm-ivory transition-opacity hover:opacity-90 cursor-not-allowed opacity-80"
+          >
+            + Create Project (Soon)
           </button>
         </div>
-      </header>
 
-      {/* Main Content Placeholder */}
-      <section className="mx-auto w-full max-w-3xl py-16">
-        <div className="rounded-2xl border border-ink-forest/20 bg-ink-forest p-8 sm:p-12 text-warm-ivory shadow-xl">
-          <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 rounded-full bg-electric-lime px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-ink-forest">
-              Authenticated Admin Session
+        {/* Statistics Grid */}
+        <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="rounded-2xl border border-ink-forest/15 bg-white/50 p-5 shadow-sm">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-ink-forest/60 block mb-1">
+              Total Projects
+            </span>
+            <span className="font-serif text-3xl text-ink-forest">
+              {projectsLoading ? "—" : stats.total}
+            </span>
+          </div>
+          <div className="rounded-2xl border border-ink-forest/15 bg-white/50 p-5 shadow-sm">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-ink-forest/60 block mb-1">
+              Published
+            </span>
+            <span className="font-serif text-3xl text-ink-forest">
+              {projectsLoading ? "—" : stats.published}
+            </span>
+          </div>
+          <div className="rounded-2xl border border-ink-forest/15 bg-white/50 p-5 shadow-sm">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-ink-forest/60 block mb-1">
+              Drafts
+            </span>
+            <span className="font-serif text-3xl text-ink-forest">
+              {projectsLoading ? "—" : stats.drafts}
+            </span>
+          </div>
+          <div className="rounded-2xl border border-ink-forest/15 bg-white/50 p-5 shadow-sm">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-ink-forest/60 block mb-1">
+              Featured
+            </span>
+            <span className="font-serif text-3xl text-ink-forest">
+              {projectsLoading ? "—" : stats.featured}
+            </span>
+          </div>
+        </section>
+
+        {/* Search & Filter Toolbar */}
+        <section className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            {/* Search Input */}
+            <div className="relative w-full sm:max-w-md">
+              <input
+                type="text"
+                placeholder="Search by title or slug..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-xl border border-ink-forest/20 bg-white px-4 py-2.5 text-xs text-ink-forest placeholder-ink-forest/40 focus:outline-none focus:ring-2 focus:ring-ink-forest/30"
+              />
             </div>
 
-            <h1 className="font-serif text-3xl sm:text-4xl text-warm-ivory font-light">
-              Welcome back to ABEL / DIGITAL Studio Portal
-            </h1>
-
-            <p className="text-xs sm:text-sm text-warm-ivory/80 leading-relaxed max-w-xl">
-              Your session is active. This destination is the base endpoint for
-              upcoming administrative modules (project creation, editing, and
-              content management).
-            </p>
-
-            <div className="pt-4 border-t border-warm-ivory/15 grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs">
-              <div className="p-4 rounded-xl bg-warm-ivory/10 border border-warm-ivory/15">
-                <span className="text-electric-lime text-[10px] uppercase tracking-wider block mb-1">
-                  Session Identity
-                </span>
-                <span className="truncate block text-warm-ivory">
-                  {admin?.email}
-                </span>
-              </div>
-              <div className="p-4 rounded-xl bg-warm-ivory/10 border border-warm-ivory/15">
-                <span className="text-electric-lime text-[10px] uppercase tracking-wider block mb-1">
-                  Status
-                </span>
-                <span className="text-warm-ivory">
-                  HttpOnly Cookie Validated
-                </span>
-              </div>
+            {/* Filter Tabs */}
+            <div className="inline-flex rounded-xl border border-ink-forest/20 bg-white/60 p-1 font-mono text-xs">
+              <button
+                onClick={() => setFilterTab("all")}
+                className={`rounded-lg px-3.5 py-1.5 transition-colors ${
+                  filterTab === "all"
+                    ? "bg-ink-forest text-warm-ivory font-medium"
+                    : "text-ink-forest/70 hover:text-ink-forest"
+                }`}
+              >
+                All ({projects.length})
+              </button>
+              <button
+                onClick={() => setFilterTab("published")}
+                className={`rounded-lg px-3.5 py-1.5 transition-colors ${
+                  filterTab === "published"
+                    ? "bg-ink-forest text-warm-ivory font-medium"
+                    : "text-ink-forest/70 hover:text-ink-forest"
+                }`}
+              >
+                Published ({stats.published})
+              </button>
+              <button
+                onClick={() => setFilterTab("drafts")}
+                className={`rounded-lg px-3.5 py-1.5 transition-colors ${
+                  filterTab === "drafts"
+                    ? "bg-ink-forest text-warm-ivory font-medium"
+                    : "text-ink-forest/70 hover:text-ink-forest"
+                }`}
+              >
+                Drafts ({stats.drafts})
+              </button>
             </div>
           </div>
-        </div>
-      </section>
+
+          {/* Projects Table / Card List Container */}
+          <div className="rounded-2xl border border-ink-forest/15 bg-white shadow-sm overflow-hidden">
+            {projectsLoading ? (
+              <div className="flex flex-col items-center justify-center p-16 gap-3 text-center">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-ink-forest/20 border-t-ink-forest" />
+                <p className="font-mono text-xs uppercase tracking-wider text-ink-forest/60">
+                  Loading portfolio projects...
+                </p>
+              </div>
+            ) : projectsError ? (
+              <div className="p-12 text-center text-red-600 font-mono text-xs">
+                {projectsError}
+              </div>
+            ) : filteredProjects.length === 0 ? (
+              <div className="p-16 text-center space-y-2">
+                <p className="font-serif text-lg text-ink-forest">
+                  No projects found
+                </p>
+                <p className="font-mono text-xs text-ink-forest/60">
+                  {searchQuery || filterTab !== "all"
+                    ? "Try adjusting your search query or filter criteria."
+                    : "No projects have been added to the database yet."}
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-ink-forest/10 bg-ink-forest/[0.02] font-mono text-[10px] uppercase tracking-wider text-ink-forest/60">
+                      <th className="py-3.5 px-6">Project Title</th>
+                      <th className="py-3.5 px-6">Slug</th>
+                      <th className="py-3.5 px-6">Category</th>
+                      <th className="py-3.5 px-6">Status</th>
+                      <th className="py-3.5 px-6">Featured</th>
+                      <th className="py-3.5 px-6">Created</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-ink-forest/10 font-mono text-xs">
+                    {filteredProjects.map((project) => (
+                      <tr
+                        key={project.id}
+                        className="transition-colors hover:bg-ink-forest/[0.015]"
+                      >
+                        <td className="py-4 px-6 font-medium text-ink-forest">
+                          <div className="flex items-center gap-2">
+                            {project.imageUrl && (
+                              <img
+                                src={project.imageUrl}
+                                alt=""
+                                className="h-7 w-7 rounded-lg object-cover border border-ink-forest/15"
+                              />
+                            )}
+                            <span className="font-sans font-medium text-sm">
+                              {project.title}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6 text-ink-forest/70">
+                          {project.slug}
+                        </td>
+                        <td className="py-4 px-6 text-ink-forest/80">
+                          {project.category || "—"}
+                        </td>
+                        <td className="py-4 px-6">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider ${
+                              project.published
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-amber-100 text-amber-800"
+                            }`}
+                          >
+                            {project.published ? "Published" : "Draft"}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          {project.featured ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-electric-lime/40 text-ink-forest text-[10px] font-semibold uppercase">
+                              Featured
+                            </span>
+                          ) : (
+                            <span className="text-ink-forest/40">—</span>
+                          )}
+                        </td>
+                        <td className="py-4 px-6 text-ink-forest/60">
+                          {project.createdAt
+                            ? new Date(project.createdAt).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                },
+                              )
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
 
       {/* Footer */}
-      <footer className="flex flex-col sm:flex-row items-center justify-between border-t border-ink-forest/10 pt-6 text-[11px] font-mono text-ink-forest/60 gap-2">
+      <footer className="flex flex-col sm:flex-row items-center justify-between border-t border-ink-forest/10 pt-6 text-[11px] font-mono text-ink-forest/60 gap-2 mt-12">
         <span>ABEL / DIGITAL — ADMIN DASHBOARD</span>
         <span>PROTECTED AREA</span>
       </footer>
