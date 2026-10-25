@@ -8,7 +8,6 @@ export default function AdminDashboardPage() {
   const router = useRouter();
   const [admin, setAdmin] = useState(null);
   const [status, setStatus] = useState("loading"); // "loading" | "ready" | "error"
-  const [errorMessage, setErrorMessage] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
 
   // Projects state
@@ -19,6 +18,54 @@ export default function AdminDashboardPage() {
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTab, setFilterTab] = useState("all"); // "all" | "published" | "drafts"
+
+  // Toast / Banner state
+  const [toastMessage, setToastMessage] = useState("");
+
+  // Create Project Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState([]);
+  const [formSuccess, setFormSuccess] = useState("");
+
+  // Form Fields
+  const [formData, setFormData] = useState({
+    title: "",
+    slug: "",
+    category: "",
+    description: "",
+    liveUrl: "",
+    githubUrl: "",
+    imageUrl: "",
+    featured: false,
+    published: false,
+  });
+
+  const fetchProjects = async () => {
+    setProjectsLoading(true);
+    try {
+      const projectsRes = await fetch("/api/admin/projects", { method: "GET" });
+      if (projectsRes.status === 401) {
+        router.replace("/admin/login");
+        return;
+      }
+
+      if (!projectsRes.ok) {
+        throw new Error("Failed to load portfolio projects.");
+      }
+
+      const projectsData = await projectsRes.json();
+      setProjects(projectsData.projects || []);
+      setProjectsError("");
+    } catch (err) {
+      console.error("Error fetching projects:", err);
+      setProjectsError(
+        err.message || "An unexpected error occurred while fetching projects.",
+      );
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
 
   useEffect(() => {
     async function verifyAndFetchData() {
@@ -39,29 +86,11 @@ export default function AdminDashboardPage() {
         setAdmin(sessionData.admin);
         setStatus("ready");
 
-        // 2. Fetch projects
-        const projectsRes = await fetch("/api/admin/projects", {
-          method: "GET",
-        });
-        if (projectsRes.status === 401) {
-          router.replace("/admin/login");
-          return;
-        }
-
-        if (!projectsRes.ok) {
-          throw new Error("Failed to load portfolio projects.");
-        }
-
-        const projectsData = await projectsRes.json();
-        setProjects(projectsData.projects || []);
+        // 2. Fetch initial projects
+        await fetchProjects();
       } catch (err) {
         console.error("Dashboard initialization error:", err);
-        setProjectsError(
-          err.message ||
-            "An unexpected error occurred while fetching projects.",
-        );
-      } finally {
-        setProjectsLoading(false);
+        router.replace("/admin/login");
       }
     }
 
@@ -76,6 +105,112 @@ export default function AdminDashboardPage() {
       console.error("Logout error:", err);
     } finally {
       router.replace("/admin/login");
+    }
+  };
+
+  // Helper to open modal and clear stale form state
+  const openModal = () => {
+    setFormData({
+      title: "",
+      slug: "",
+      category: "",
+      description: "",
+      liveUrl: "",
+      githubUrl: "",
+      imageUrl: "",
+      featured: false,
+      published: false,
+    });
+    setFormErrors([]);
+    setFormSuccess("");
+    setIsModalOpen(true);
+  };
+
+  // Auto-slugify generator for quick slug suggestions
+  const handleTitleChange = (e) => {
+    const titleVal = e.target.value;
+    const autoSlug = titleVal
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9 -]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-");
+
+    setFormData((prev) => ({
+      ...prev,
+      title: titleVal,
+      slug:
+        prev.slug === "" || prev.slug === autoSlug.slice(0, -1)
+          ? autoSlug
+          : prev.slug,
+    }));
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    if (submitting) return;
+
+    setSubmitting(true);
+    setFormErrors([]);
+    setFormSuccess("");
+
+    // Prepare API payload matching POST /api/admin/projects expectation
+    const payload = {
+      title: formData.title.trim(),
+      slug: formData.slug.trim(),
+      category: formData.category.trim(),
+      description: formData.description.trim(),
+      liveUrl: formData.liveUrl.trim() || undefined,
+      githubUrl: formData.githubUrl.trim() || undefined,
+      imageUrl: formData.imageUrl.trim() || undefined,
+      featured: formData.featured,
+      published: formData.published,
+    };
+
+    try {
+      const response = await fetch("/api/admin/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.status === 401) {
+        router.replace("/admin/login");
+        return;
+      }
+
+      const resData = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          setFormErrors([
+            "A project with this slug already exists. Please choose a unique slug.",
+          ]);
+        } else if (resData.details && Array.isArray(resData.details)) {
+          setFormErrors(resData.details);
+        } else {
+          setFormErrors([
+            resData.error ||
+              "Failed to create project. Please review your input.",
+          ]);
+        }
+        return;
+      }
+
+      // Successful creation
+      setIsModalOpen(false);
+      setToastMessage(`Project "${payload.title}" created successfully!`);
+      setTimeout(() => setToastMessage(""), 5000);
+
+      // Refresh list & stats
+      await fetchProjects();
+    } catch (err) {
+      console.error("Create project submission error:", err);
+      setFormErrors([
+        "Network error. Please check your connection and try again without losing your form input.",
+      ]);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -119,7 +254,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-warm-ivory text-ink-forest flex flex-col justify-between p-6 lg:p-12">
+    <main className="min-h-screen bg-warm-ivory text-ink-forest flex flex-col justify-between p-6 lg:p-12 relative">
       <div className="space-y-10">
         {/* Header */}
         <header className="flex items-center justify-between border-b border-ink-forest/10 pb-6">
@@ -147,7 +282,20 @@ export default function AdminDashboardPage() {
           </div>
         </header>
 
-        {/* Studio Welcome & Quick Actions */}
+        {/* Global Toast Banner */}
+        {toastMessage && (
+          <div className="rounded-xl bg-emerald-800 text-warm-ivory p-4 font-mono text-xs flex items-center justify-between shadow-md">
+            <span>✓ {toastMessage}</span>
+            <button
+              onClick={() => setToastMessage("")}
+              className="text-warm-ivory/70 hover:text-warm-ivory"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Studio Welcome & Create Trigger */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-ink-forest/10 px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-ink-forest mb-2">
@@ -160,11 +308,10 @@ export default function AdminDashboardPage() {
 
           <button
             type="button"
-            disabled
-            title="Project creation module coming soon"
-            className="inline-flex items-center justify-center rounded-full bg-ink-forest px-5 py-2.5 font-mono text-xs uppercase tracking-wider text-warm-ivory transition-opacity hover:opacity-90 cursor-not-allowed opacity-80"
+            onClick={openModal}
+            className="inline-flex items-center justify-center rounded-full bg-ink-forest px-5 py-2.5 font-mono text-xs uppercase tracking-wider text-warm-ivory transition-opacity hover:opacity-90 shadow-sm"
           >
-            + Create Project (Soon)
+            + Create Project
           </button>
         </div>
 
@@ -357,6 +504,210 @@ export default function AdminDashboardPage() {
           </div>
         </section>
       </div>
+
+      {/* CREATE PROJECT MODAL */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 sm:p-6 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-2xl border border-ink-forest/20 bg-warm-ivory p-6 sm:p-8 shadow-2xl space-y-6 my-8">
+            <div className="flex items-center justify-between border-b border-ink-forest/10 pb-4">
+              <div>
+                <span className="font-mono text-[10px] uppercase tracking-wider text-ink-forest/60">
+                  New Record
+                </span>
+                <h2 className="font-serif text-2xl text-ink-forest font-light">
+                  Create Portfolio Project
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="rounded-full p-2 text-ink-forest/60 hover:text-ink-forest font-mono text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Error Banner */}
+            {formErrors.length > 0 && (
+              <div className="rounded-xl bg-red-50 border border-red-200 p-4 font-mono text-xs text-red-700 space-y-1">
+                <p className="font-bold uppercase tracking-wider">
+                  Submission Errors:
+                </p>
+                <ul className="list-disc list-inside space-y-0.5">
+                  {formErrors.map((err, idx) => (
+                    <li key={idx}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <form onSubmit={handleFormSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Title */}
+                <div>
+                  <label className="block font-mono text-[10px] uppercase tracking-wider text-ink-forest/70 mb-1">
+                    Project Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Kora Leather"
+                    value={formData.title}
+                    onChange={handleTitleChange}
+                    className="w-full rounded-xl border border-ink-forest/20 bg-white px-3.5 py-2 text-xs text-ink-forest focus:outline-none focus:ring-2 focus:ring-ink-forest/30"
+                  />
+                </div>
+
+                {/* Slug */}
+                <div>
+                  <label className="block font-mono text-[10px] uppercase tracking-wider text-ink-forest/70 mb-1">
+                    Slug <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. kora-leather"
+                    value={formData.slug}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        slug: e.target.value.toLowerCase().replace(/\s+/g, "-"),
+                      })
+                    }
+                    className="w-full rounded-xl border border-ink-forest/20 bg-white px-3.5 py-2 text-xs text-ink-forest font-mono focus:outline-none focus:ring-2 focus:ring-ink-forest/30"
+                  />
+                </div>
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block font-mono text-[10px] uppercase tracking-wider text-ink-forest/70 mb-1">
+                  Category <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. E-Commerce & Brand Experience"
+                  value={formData.category}
+                  onChange={(e) =>
+                    setFormData({ ...formData, category: e.target.value })
+                  }
+                  className="w-full rounded-xl border border-ink-forest/20 bg-white px-3.5 py-2 text-xs text-ink-forest focus:outline-none focus:ring-2 focus:ring-ink-forest/30"
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block font-mono text-[10px] uppercase tracking-wider text-ink-forest/70 mb-1">
+                  Description <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Summary of the project context, technical architecture, and challenges solved..."
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  className="w-full rounded-xl border border-ink-forest/20 bg-white px-3.5 py-2 text-xs text-ink-forest focus:outline-none focus:ring-2 focus:ring-ink-forest/30"
+                />
+              </div>
+
+              {/* Optional URLs */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block font-mono text-[10px] uppercase tracking-wider text-ink-forest/70 mb-1">
+                    Live URL (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={formData.liveUrl}
+                    onChange={(e) =>
+                      setFormData({ ...formData, liveUrl: e.target.value })
+                    }
+                    className="w-full rounded-xl border border-ink-forest/20 bg-white px-3.5 py-2 text-xs text-ink-forest focus:outline-none focus:ring-2 focus:ring-ink-forest/30"
+                  />
+                </div>
+                <div>
+                  <label className="block font-mono text-[10px] uppercase tracking-wider text-ink-forest/70 mb-1">
+                    GitHub URL (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://github.com/..."
+                    value={formData.githubUrl}
+                    onChange={(e) =>
+                      setFormData({ ...formData, githubUrl: e.target.value })
+                    }
+                    className="w-full rounded-xl border border-ink-forest/20 bg-white px-3.5 py-2 text-xs text-ink-forest focus:outline-none focus:ring-2 focus:ring-ink-forest/30"
+                  />
+                </div>
+                <div>
+                  <label className="block font-mono text-[10px] uppercase tracking-wider text-ink-forest/70 mb-1">
+                    Image URL (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://..."
+                    value={formData.imageUrl}
+                    onChange={(e) =>
+                      setFormData({ ...formData, imageUrl: e.target.value })
+                    }
+                    className="w-full rounded-xl border border-ink-forest/20 bg-white px-3.5 py-2 text-xs text-ink-forest focus:outline-none focus:ring-2 focus:ring-ink-forest/30"
+                  />
+                </div>
+              </div>
+
+              {/* Checkboxes for Booleans */}
+              <div className="flex items-center gap-6 pt-2 font-mono text-xs">
+                <label className="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.published}
+                    onChange={(e) =>
+                      setFormData({ ...formData, published: e.target.checked })
+                    }
+                    className="rounded border-ink-forest/30 text-ink-forest focus:ring-ink-forest"
+                  />
+                  <span>Publish immediately</span>
+                </label>
+
+                <label className="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.featured}
+                    onChange={(e) =>
+                      setFormData({ ...formData, featured: e.target.checked })
+                    }
+                    className="rounded border-ink-forest/30 text-ink-forest focus:ring-ink-forest"
+                  />
+                  <span>Mark as Featured</span>
+                </label>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-ink-forest/10">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  disabled={submitting}
+                  className="rounded-full border border-ink-forest/20 px-4 py-2 font-mono text-xs uppercase tracking-wider text-ink-forest hover:bg-ink-forest/5 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="rounded-full bg-ink-forest px-6 py-2 font-mono text-xs uppercase tracking-wider text-warm-ivory transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  {submitting ? "Saving..." : "Create Project"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="flex flex-col sm:flex-row items-center justify-between border-t border-ink-forest/10 pt-6 text-[11px] font-mono text-ink-forest/60 gap-2 mt-12">
