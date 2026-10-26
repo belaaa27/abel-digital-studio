@@ -85,7 +85,6 @@ export async function PATCH(request, { params }) {
     );
   }
 
-  // Check if project exists
   let existingProject;
   try {
     existingProject = await prisma.project.findUnique({
@@ -236,7 +235,6 @@ export async function PATCH(request, { params }) {
     );
   }
 
-  // If slug is updated, check for duplicates
   if (cleanSlug && cleanSlug !== existingProject.slug) {
     try {
       const duplicate = await prisma.project.findUnique({
@@ -294,6 +292,67 @@ export async function PATCH(request, { params }) {
     console.error("Database error updating project:", err);
     return NextResponse.json(
       { error: "Internal server error while updating project." },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(request, { params }) {
+  const { adminUser, dbError } = await verifyAdminSession();
+  if (dbError) {
+    return NextResponse.json(
+      { error: "Internal server error during session verification." },
+      { status: 500 },
+    );
+  }
+  if (!adminUser) {
+    return NextResponse.json(
+      { error: "Unauthorized access. Valid admin session required." },
+      { status: 401 },
+    );
+  }
+
+  const { id } = await params;
+  if (!id) {
+    return NextResponse.json(
+      { error: "Validation failed", details: ["Project ID is required."] },
+      { status: 400 },
+    );
+  }
+
+  let existingProject;
+  try {
+    existingProject = await prisma.project.findUnique({
+      where: { id },
+    });
+  } catch (err) {
+    console.error("Database error finding project for deletion:", err);
+    return NextResponse.json(
+      { error: "Internal server error while checking project existence." },
+      { status: 500 },
+    );
+  }
+
+  if (!existingProject) {
+    return NextResponse.json(
+      { error: "Not Found", details: [`Project with ID '${id}' not found.`] },
+      { status: 404 },
+    );
+  }
+
+  try {
+    await prisma.project.delete({
+      where: { id },
+    });
+
+    return NextResponse.json(
+      { message: "Project deleted successfully", id },
+      { status: 200 },
+    );
+  } catch (err) {
+    console.error("Database error deleting project:", err);
+    return NextResponse.json(
+      { error: "Internal server error while deleting project." },
       { status: 500 },
     );
   }

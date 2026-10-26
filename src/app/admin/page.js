@@ -24,9 +24,15 @@ export default function AdminDashboardPage() {
 
   // Create / Edit Project Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProjectId, setEditingProjectId] = useState(null); // null = create mode, string = edit mode ID
+  const [editingProjectId, setEditingProjectId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState([]);
+
+  // Delete Confirmation Modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   // Form Fields
   const [formData, setFormData] = useState({
@@ -106,7 +112,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Open modal for Create mode
   const openCreateModal = () => {
     setEditingProjectId(null);
     setFormData({
@@ -124,7 +129,6 @@ export default function AdminDashboardPage() {
     setIsModalOpen(true);
   };
 
-  // Open modal for Edit mode
   const openEditModal = (project) => {
     setEditingProjectId(project.id);
     setFormData({
@@ -142,7 +146,54 @@ export default function AdminDashboardPage() {
     setIsModalOpen(true);
   };
 
-  // Auto-slugify generator for quick slug suggestions during creation
+  const openDeleteModal = (project) => {
+    setProjectToDelete(project);
+    setDeleteError("");
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!projectToDelete || deleting) return;
+
+    setDeleting(true);
+    setDeleteError("");
+
+    try {
+      const response = await fetch(
+        `/api/admin/projects/${projectToDelete.id}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      if (response.status === 401) {
+        router.replace("/admin/login");
+        return;
+      }
+
+      if (!response.ok) {
+        const resData = await response.json();
+        throw new Error(resData.error || "Failed to delete project.");
+      }
+
+      setDeleteModalOpen(false);
+      setToastMessage(
+        `Project "${projectToDelete.title}" deleted successfully!`,
+      );
+      setTimeout(() => setToastMessage(""), 5000);
+
+      setProjectToDelete(null);
+      await fetchProjects();
+    } catch (err) {
+      console.error("Delete project error:", err);
+      setDeleteError(
+        err.message || "Failed to delete project. Please try again.",
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleTitleChange = (e) => {
     const titleVal = e.target.value;
     const autoSlug = titleVal
@@ -518,13 +569,20 @@ export default function AdminDashboardPage() {
                               )
                             : "—"}
                         </td>
-                        <td className="py-4 px-6 text-right">
+                        <td className="py-4 px-6 text-right space-x-2">
                           <button
                             type="button"
                             onClick={() => openEditModal(project)}
                             className="rounded-lg border border-ink-forest/20 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-ink-forest hover:bg-ink-forest hover:text-warm-ivory transition-colors"
                           >
                             Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openDeleteModal(project)}
+                            className="rounded-lg border border-red-300 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-red-700 hover:bg-red-700 hover:text-white transition-colors"
+                          >
+                            Delete
                           </button>
                         </td>
                       </tr>
@@ -561,7 +619,6 @@ export default function AdminDashboardPage() {
               </button>
             </div>
 
-            {/* Modal Error Banner */}
             {formErrors.length > 0 && (
               <div className="rounded-xl bg-red-50 border border-red-200 p-4 font-mono text-xs text-red-700 space-y-1">
                 <p className="font-bold uppercase tracking-wider">
@@ -577,7 +634,6 @@ export default function AdminDashboardPage() {
 
             <form onSubmit={handleFormSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Title */}
                 <div>
                   <label className="block font-mono text-[10px] uppercase tracking-wider text-ink-forest/70 mb-1">
                     Project Title <span className="text-red-500">*</span>
@@ -592,7 +648,6 @@ export default function AdminDashboardPage() {
                   />
                 </div>
 
-                {/* Slug */}
                 <div>
                   <label className="block font-mono text-[10px] uppercase tracking-wider text-ink-forest/70 mb-1">
                     Slug <span className="text-red-500">*</span>
@@ -613,7 +668,6 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              {/* Category */}
               <div>
                 <label className="block font-mono text-[10px] uppercase tracking-wider text-ink-forest/70 mb-1">
                   Category <span className="text-red-500">*</span>
@@ -630,7 +684,6 @@ export default function AdminDashboardPage() {
                 />
               </div>
 
-              {/* Description */}
               <div>
                 <label className="block font-mono text-[10px] uppercase tracking-wider text-ink-forest/70 mb-1">
                   Description <span className="text-red-500">*</span>
@@ -647,7 +700,6 @@ export default function AdminDashboardPage() {
                 />
               </div>
 
-              {/* Optional URLs */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block font-mono text-[10px] uppercase tracking-wider text-ink-forest/70 mb-1">
@@ -693,7 +745,6 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
 
-              {/* Checkboxes for Booleans */}
               <div className="flex items-center gap-6 pt-2 font-mono text-xs">
                 <label className="inline-flex items-center gap-2 cursor-pointer">
                   <input
@@ -720,7 +771,6 @@ export default function AdminDashboardPage() {
                 </label>
               </div>
 
-              {/* Actions */}
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-ink-forest/10">
                 <button
                   type="button"
@@ -743,6 +793,56 @@ export default function AdminDashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteModalOpen && projectToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 sm:p-6 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-ink-forest/20 bg-warm-ivory p-6 sm:p-8 shadow-2xl space-y-6">
+            <div>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-red-600 font-bold">
+                Destructive Action
+              </span>
+              <h2 className="font-serif text-2xl text-ink-forest font-light mt-1">
+                Delete Project?
+              </h2>
+            </div>
+
+            <p className="font-mono text-xs text-ink-forest/80 leading-relaxed">
+              Are you sure you want to delete{" "}
+              <strong className="font-semibold text-ink-forest">
+                {projectToDelete.title}
+              </strong>
+              ? This action cannot be undone and will remove the project from
+              the public portfolio.
+            </p>
+
+            {deleteError && (
+              <div className="rounded-xl bg-red-50 border border-red-200 p-3 font-mono text-xs text-red-700">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-ink-forest/10 font-mono text-xs">
+              <button
+                type="button"
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={deleting}
+                className="rounded-full border border-ink-forest/20 px-4 py-2 uppercase tracking-wider text-ink-forest hover:bg-ink-forest/5 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+                className="rounded-full bg-red-700 px-6 py-2 uppercase tracking-wider text-white hover:bg-red-800 disabled:opacity-50 transition-colors"
+              >
+                {deleting ? "Deleting..." : "Confirm Delete"}
+              </button>
+            </div>
           </div>
         </div>
       )}
