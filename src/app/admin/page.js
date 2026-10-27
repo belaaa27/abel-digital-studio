@@ -27,6 +27,9 @@ export default function AdminDashboardPage() {
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState([]);
+  // Screenshot Generator state
+  const [generatingScreenshot, setGeneratingScreenshot] = useState(false);
+  const [screenshotError, setScreenshotError] = useState("");
 
   // Delete Confirmation Modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -212,6 +215,50 @@ export default function AdminDashboardPage() {
           ? autoSlug
           : prev.slug,
     }));
+  };
+
+  const handleGenerateScreenshot = async () => {
+    if (!formData.liveUrl || generatingScreenshot) return;
+
+    setGeneratingScreenshot(true);
+    setScreenshotError("");
+
+    try {
+      const response = await fetch("/api/admin/screenshots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: formData.liveUrl }),
+      });
+
+      if (response.status === 401) {
+        router.replace("/admin/login");
+        return;
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || data.details?.[0] || "Failed to generate screenshot.",
+        );
+      }
+
+      if (!data.imageUrl) {
+        throw new Error("The server did not return an image URL.");
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        imageUrl: data.imageUrl,
+      }));
+    } catch (err) {
+      console.error("Screenshot generation error:", err);
+      setScreenshotError(
+        err.message || "Failed to generate website screenshot.",
+      );
+    } finally {
+      setGeneratingScreenshot(false);
+    }
   };
 
   const handleFormSubmit = async (e) => {
@@ -729,10 +776,25 @@ export default function AdminDashboardPage() {
                     className="w-full rounded-xl border border-ink-forest/20 bg-white px-3.5 py-2 text-xs text-ink-forest focus:outline-none focus:ring-2 focus:ring-ink-forest/30"
                   />
                 </div>
+
                 <div>
-                  <label className="block font-mono text-[10px] uppercase tracking-wider text-ink-forest/70 mb-1">
-                    Image URL (Optional)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-mono text-[10px] uppercase tracking-wider text-ink-forest/70">
+                      Image URL (Optional)
+                    </label>
+
+                    <button
+                      type="button"
+                      disabled={generatingScreenshot || !formData.liveUrl}
+                      onClick={handleGenerateScreenshot}
+                      className="font-mono text-[9px] uppercase tracking-wider text-ink-forest bg-electric-lime/40 hover:bg-electric-lime px-2 py-0.5 rounded transition-colors disabled:opacity-40 cursor-pointer"
+                    >
+                      {generatingScreenshot
+                        ? "Capturing..."
+                        : "✨ Generate Screenshot"}
+                    </button>
+                  </div>
+
                   <input
                     type="url"
                     placeholder="https://..."
@@ -742,6 +804,25 @@ export default function AdminDashboardPage() {
                     }
                     className="w-full rounded-xl border border-ink-forest/20 bg-white px-3.5 py-2 text-xs text-ink-forest focus:outline-none focus:ring-2 focus:ring-ink-forest/30"
                   />
+
+                  {screenshotError && (
+                    <p className="mt-1 font-mono text-[10px] text-red-600">
+                      {screenshotError}
+                    </p>
+                  )}
+
+                  {formData.imageUrl && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <img
+                        src={formData.imageUrl}
+                        alt="Website screenshot preview"
+                        className="h-10 w-16 object-cover rounded border border-ink-forest/20"
+                      />
+                      <span className="font-mono text-[9px] text-ink-forest/60">
+                        Image preview
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
