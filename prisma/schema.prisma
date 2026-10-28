@@ -17,6 +17,7 @@ model Project {
   liveUrl     String?
   githubUrl   String?
   imageUrl    String?
+  tags        String?  // Added: Comma-separated technology tags
   featured    Boolean  @default(false)
   published   Boolean  @default(false)
   createdAt   DateTime @default(now())

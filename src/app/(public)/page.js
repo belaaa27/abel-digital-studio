@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { prisma } from "@/lib/prisma";
 
 export const metadata = {
   title: "ABEL / DIGITAL — Independent Digital Studio & Full-Stack Practice",
@@ -6,11 +7,23 @@ export const metadata = {
     "Selected full-stack web applications and digital design projects by Abel, including Time Delivery, Kora Leather, Aster Coffee, Henok Art Studio, and Nuru Dental.",
 };
 
-export default function Home() {
-  // Placeholder contact email - easily replace with your confirmed address
+export default async function Home() {
+  // Query all published projects from the database with proper error handling (Requirement 9)
+  let dbProjects = [];
+  try {
+    dbProjects = await prisma.project.findMany({
+      where: { published: true },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (err) {
+    console.error("Database error fetching published projects:", err);
+    throw new Error("Failed to load published projects from the database.");
+  }
+
+  // Placeholder contact email
   const contactEmail = "mailto:abelmillionnov07@gmail.com";
 
-  // Primary Featured Full-Stack Project
+  // Primary Featured Full-Stack Project (Unchanged per requirements)
   const featuredProject = {
     title: "Time Delivery",
     category: "Full-Stack Web Application & Admin Platform",
@@ -44,50 +57,6 @@ export default function Home() {
       "Netlify / Render",
     ],
   };
-
-  // Selected Websites & Digital Experiences Showcase
-  const projects = [
-    {
-      id: "kora-leather",
-      title: "Kora Leather",
-      category: "E-Commerce & Brand Experience",
-      url: "https://kora-leather.netlify.app",
-      description:
-        "An e-commerce experience designed for handcrafted leather goods with product visual galleries and brand storytelling.",
-      tags: ["React", "Tailwind CSS", "E-Commerce UI"],
-      badge: "Selected Project",
-    },
-    {
-      id: "aster-coffee",
-      title: "Aster Coffee",
-      category: "Hospitality & Retail Concept",
-      url: "https://aster-coffee.netlify.app",
-      description:
-        "A narrative-driven web storefront and menu layout tailored for a specialty artisan coffee roaster and cafe.",
-      tags: ["React", "Tailwind CSS", "Brand UI"],
-      badge: "Selected Project",
-    },
-    {
-      id: "henok-art",
-      title: "Henok Art Studio",
-      category: "Creative Portfolio & Gallery",
-      url: "https://henok-art-studio.netlify.app",
-      description:
-        "A minimalist visual gallery layout for fine art and illustration collections with focus on clean layout presentation.",
-      tags: ["React", "Tailwind CSS", "Portfolio"],
-      badge: "Selected Project",
-    },
-    {
-      id: "nuru-dental",
-      title: "Nuru Dental",
-      category: "Healthcare & Patient Care Practice",
-      url: "https://nuru-dental.netlify.app",
-      description:
-        "A patient-focused healthcare web application designed around clear care service information and appointment inquiry workflows.",
-      tags: ["React", "React Router", "Tailwind CSS"],
-      badge: "Selected Project",
-    },
-  ];
 
   return (
     <main className="min-h-screen bg-warm-ivory text-ink-forest">
@@ -353,7 +322,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SELECTED WEBSITES & DIGITAL EXPERIENCES GRID */}
+      {/* SELECTED WEBSITES & DIGITAL EXPERIENCES GRID (DYNAMIC DB PROJECTS) */}
       <section
         id="work"
         className="border-b border-ink-forest/10 px-6 py-20 lg:px-8"
@@ -376,9 +345,9 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Project Grid */}
+          {/* Project Grid from Database */}
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-            {projects.map((project) => (
+            {dbProjects.map((project) => (
               <div
                 key={project.id}
                 className="group relative flex flex-col justify-between rounded-2xl border border-ink-forest/15 bg-white/50 p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-ink-forest/40 hover:shadow-md"
@@ -387,12 +356,25 @@ export default function Home() {
                   {/* Card Header Tag & Category */}
                   <div className="flex items-center justify-between gap-2 border-b border-ink-forest/10 pb-4">
                     <span className="font-mono text-[10px] uppercase tracking-widest text-ink-forest/60">
-                      {project.category}
+                      {project.category || "Digital Experience"}
                     </span>
                     <span className="rounded-full bg-ink-forest/5 px-2.5 py-0.5 font-mono text-[10px] uppercase text-ink-forest/80 border border-ink-forest/10">
-                      {project.badge}
+                      {project.featured
+                        ? "Featured Project"
+                        : "Selected Project"}
                     </span>
                   </div>
+
+                  {/* Optional Screenshot Preview if present */}
+                  {project.imageUrl && project.imageUrl.trim() !== "" && (
+                    <div className="mt-6 overflow-hidden rounded-xl border border-ink-forest/15 bg-ink-forest/5 aspect-[16/9]">
+                      <img
+                        src={project.imageUrl}
+                        alt={`${project.title} live website screenshot`}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </div>
+                  )}
 
                   {/* Card Title & Description */}
                   <h3 className="mt-6 font-serif text-2xl font-normal text-ink-forest transition-colors group-hover:text-ink-forest/80">
@@ -402,42 +384,54 @@ export default function Home() {
                     {project.description}
                   </p>
 
-                  {/* Tech Tags */}
-                  <div className="mt-6 flex flex-wrap gap-2">
-                    {project.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full border border-ink-forest/10 bg-warm-ivory px-2.5 py-1 font-mono text-[10px] text-ink-forest/70"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                  {/* Technology Tags (Parsed from DB string) */}
+                  {project.tags && project.tags.trim() !== "" && (
+                    <div className="mt-6 flex flex-wrap gap-2">
+                      {project.tags.split(",").map((tag) => {
+                        const trimmed = tag.trim();
+                        if (!trimmed) return null;
+                        return (
+                          <span
+                            key={trimmed}
+                            className="rounded-full border border-ink-forest/10 bg-warm-ivory px-2.5 py-1 font-mono text-[10px] text-ink-forest/70"
+                          >
+                            {trimmed}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Card Action Link */}
                 <div className="mt-8 pt-6 border-t border-ink-forest/10 flex items-center justify-between">
-                  <a
-                    href={project.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-ink-forest font-semibold transition-colors hover:text-ink-forest/70"
-                  >
-                    <span>Visit Live Project</span>
-                    <svg
-                      className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
+                  {project.liveUrl ? (
+                    <a
+                      href={project.liveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-wider text-ink-forest font-semibold transition-colors hover:text-ink-forest/70"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                      />
-                    </svg>
-                  </a>
+                      <span>Visit Live Project</span>
+                      <svg
+                        className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                        />
+                      </svg>
+                    </a>
+                  ) : (
+                    <span className="font-mono text-xs uppercase tracking-wider text-ink-forest/40">
+                      No Live URL
+                    </span>
+                  )}
                   <span className="font-mono text-[11px] text-ink-forest/40">
                     Live Demo
                   </span>

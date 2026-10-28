@@ -34,6 +34,23 @@ async function verifyAdminSession() {
   }
 }
 
+/**
+ * Normalizes comma-separated technology tags string: trims, filters empty entries, and deduplicates.
+ */
+function normalizeTags(tagsInput) {
+  if (tagsInput === undefined || tagsInput === null || tagsInput === "") {
+    return null;
+  }
+  if (typeof tagsInput !== "string") {
+    return null;
+  }
+  const tagsArray = tagsInput
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+  return tagsArray.length > 0 ? [...new Set(tagsArray)].join(", ") : null;
+}
+
 export async function PATCH(request, { params }) {
   const { adminUser, dbError } = await verifyAdminSession();
   if (dbError) {
@@ -113,6 +130,7 @@ export async function PATCH(request, { params }) {
     liveUrl,
     githubUrl,
     imageUrl,
+    tags,
     featured,
     published,
   } = body;
@@ -168,11 +186,11 @@ export async function PATCH(request, { params }) {
       cleanDescription = description.trim();
       if (
         !cleanDescription ||
-        cleanDescription.length < 10 ||
+        cleanDescription.length < 5 ||
         cleanDescription.length > 2000
       ) {
         errors.push(
-          "Description is required and must be between 10 and 2000 characters.",
+          "Description is required and must be between 5 and 2000 characters.",
         );
       }
     }
@@ -209,6 +227,15 @@ export async function PATCH(request, { params }) {
   const cleanLiveUrl = validateUrl(liveUrl, "Live URL");
   const cleanGithubUrl = validateUrl(githubUrl, "GitHub URL");
   const cleanImageUrl = validateUrl(imageUrl, "Image URL");
+
+  let cleanTags = undefined;
+  if (tags !== undefined) {
+    if (tags !== null && tags !== "" && typeof tags !== "string") {
+      errors.push("Tags must be a text string.");
+    } else {
+      cleanTags = normalizeTags(tags);
+    }
+  }
 
   let cleanFeatured = undefined;
   if (featured !== undefined) {
@@ -266,6 +293,7 @@ export async function PATCH(request, { params }) {
   if (cleanLiveUrl !== undefined) updateData.liveUrl = cleanLiveUrl;
   if (cleanGithubUrl !== undefined) updateData.githubUrl = cleanGithubUrl;
   if (cleanImageUrl !== undefined) updateData.imageUrl = cleanImageUrl;
+  if (cleanTags !== undefined) updateData.tags = cleanTags;
   if (cleanFeatured !== undefined) updateData.featured = cleanFeatured;
   if (cleanPublished !== undefined) updateData.published = cleanPublished;
 

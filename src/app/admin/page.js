@@ -46,6 +46,7 @@ export default function AdminDashboardPage() {
     liveUrl: "",
     githubUrl: "",
     imageUrl: "",
+    tags: "", // Added
     featured: false,
     published: false,
   });
@@ -125,6 +126,7 @@ export default function AdminDashboardPage() {
       liveUrl: "",
       githubUrl: "",
       imageUrl: "",
+      tags: "",
       featured: false,
       published: false,
     });
@@ -142,6 +144,7 @@ export default function AdminDashboardPage() {
       liveUrl: project.liveUrl || "",
       githubUrl: project.githubUrl || "",
       imageUrl: project.imageUrl || "",
+      tags: project.tags || "",
       featured: Boolean(project.featured),
       published: Boolean(project.published),
     });
@@ -276,6 +279,7 @@ export default function AdminDashboardPage() {
       liveUrl: formData.liveUrl.trim() || null,
       githubUrl: formData.githubUrl.trim() || null,
       imageUrl: formData.imageUrl.trim() || null,
+      tags: formData.tags.trim() || null, // <--- Add this line here
       featured: formData.featured,
       published: formData.published,
     };
@@ -552,6 +556,7 @@ export default function AdminDashboardPage() {
                       <th className="py-3.5 px-6">Project Title</th>
                       <th className="py-3.5 px-6">Slug</th>
                       <th className="py-3.5 px-6">Category</th>
+                      <th className="py-3.5 px-6">Tags</th>
                       <th className="py-3.5 px-6">Status</th>
                       <th className="py-3.5 px-6">Featured</th>
                       <th className="py-3.5 px-6">Created</th>
@@ -584,6 +589,24 @@ export default function AdminDashboardPage() {
                         <td className="py-4 px-6 text-ink-forest/80">
                           {project.category || "—"}
                         </td>
+                        {/* --- ADD TAGS CELL HERE --- */}
+                        <td className="py-4 px-6">
+                          {project.tags ? (
+                            <div className="flex flex-wrap gap-1 max-w-[200px]">
+                              {project.tags.split(",").map((tag) => (
+                                <span
+                                  key={tag.trim()}
+                                  className="rounded bg-ink-forest/5 border border-ink-forest/10 px-1.5 py-0.5 text-[9px] font-mono text-ink-forest/70"
+                                >
+                                  {tag.trim()}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-ink-forest/40">—</span>
+                          )}
+                        </td>
+                        {/* ------------------------- */}
                         <td className="py-4 px-6">
                           <span
                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider ${
@@ -746,6 +769,26 @@ export default function AdminDashboardPage() {
                   className="w-full rounded-xl border border-ink-forest/20 bg-white px-3.5 py-2 text-xs text-ink-forest focus:outline-none focus:ring-2 focus:ring-ink-forest/30"
                 />
               </div>
+
+              {/* --- ADD THIS TECHNOLOGY TAGS FIELD HERE --- */}
+              <div>
+                <label className="block font-mono text-[10px] uppercase tracking-wider text-ink-forest/70 mb-1">
+                  Technology Tags (Comma-separated)
+                </label>
+                <input
+                  type="text"
+                  placeholder="React, Node.js, Tailwind CSS"
+                  value={formData.tags}
+                  onChange={(e) =>
+                    setFormData({ ...formData, tags: e.target.value })
+                  }
+                  className="w-full rounded-xl border border-ink-forest/20 bg-white px-3.5 py-2 text-xs text-ink-forest focus:outline-none focus:ring-2 focus:ring-ink-forest/30"
+                />
+                <p className="mt-1 font-mono text-[9px] text-ink-forest/60">
+                  Example: React, Node.js, MongoDB, Tailwind CSS
+                </p>
+              </div>
+              {/* ------------------------------------------ */}
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>

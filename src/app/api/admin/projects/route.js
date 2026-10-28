@@ -68,6 +68,23 @@ function isValidHttpUrl(stringUrl) {
 }
 
 /**
+ * Normalizes comma-separated technology tags string: trims, filters empty entries, and deduplicates.
+ */
+function normalizeTags(tagsInput) {
+  if (tagsInput === undefined || tagsInput === null || tagsInput === "") {
+    return null;
+  }
+  if (typeof tagsInput !== "string") {
+    return null;
+  }
+  const tagsArray = tagsInput
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+  return tagsArray.length > 0 ? [...new Set(tagsArray)].join(", ") : null;
+}
+
+/**
  * GET /api/admin/projects
  * Fetches all project records (published & drafts) for authenticated admin sessions.
  */
@@ -159,6 +176,7 @@ export async function POST(request) {
     liveUrl,
     githubUrl,
     imageUrl,
+    tags,
     featured,
     published,
   } = body;
@@ -264,7 +282,18 @@ export async function POST(request) {
     imageUrl = null;
   }
 
-  // Validate Boolean Flags (Strictly no type coercion of "false" string, numbers, or null)
+  // Normalize and validate optional tags string
+  const normalizedTags = normalizeTags(tags);
+  if (
+    tags !== undefined &&
+    tags !== null &&
+    tags !== "" &&
+    typeof tags !== "string"
+  ) {
+    errors.push("Tags must be a text string.");
+  }
+
+  // Validate Boolean Flags
   if (featured !== undefined) {
     if (typeof featured !== "boolean") {
       errors.push("Featured flag must be a boolean (true or false).");
@@ -314,6 +343,7 @@ export async function POST(request) {
         liveUrl,
         githubUrl,
         imageUrl,
+        tags: normalizedTags,
         featured,
         published,
       },
