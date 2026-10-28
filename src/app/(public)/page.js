@@ -39,7 +39,7 @@ export default async function Home() {
     architecture: [
       {
         name: "Frontend Client",
-        role: "React / Tailwind CSS customer web interface",
+        role: "React / CSS customer web interface",
       },
       {
         name: "Admin Dashboard",
@@ -48,14 +48,7 @@ export default async function Home() {
       { name: "Backend Service", role: "Node.js / Express REST API engine" },
       { name: "Database Engine", role: "MySQL relational database store" },
     ],
-    tags: [
-      "React",
-      "Node.js",
-      "Express",
-      "MySQL",
-      "Tailwind CSS",
-      "Netlify / Render",
-    ],
+    tags: ["React", "Node.js", "Express", "MySQL", "CSS", "Netlify / Render"],
   };
 
   return (
