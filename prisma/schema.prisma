@@ -46,3 +46,19 @@ adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete:
   @@index([adminUserId])
   @@index([expiresAt])
 }
+
+model Inquiry {
+  id          String   @id @default(uuid())
+  fullName    String
+  email       String
+  company     String?
+  projectType String
+  budget      String?
+  timeline    String?
+  description String   @db.Text
+  status      String   @default("UNREAD")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("inquiries")
+}

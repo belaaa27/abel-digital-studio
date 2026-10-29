@@ -16,6 +16,7 @@
     "ipaddr.js": "^2.5.0",
     "mariadb": "^3.5.4",
     "next": "16.4.3",
+    "nodemailer": "^10.3.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },

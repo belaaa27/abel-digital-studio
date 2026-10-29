@@ -8,9 +8,9 @@ export default function Navbar() {
 
   const navLinks = [
     { label: "Work", href: "/#work" },
-    { label: "Services", href: "/#services" },
-    { label: "About", href: "/#about" },
-    { label: "Contact", href: "/#contact" },
+    { label: "Services", href: "/services" },
+    { label: "About", href: "/about" },
+    { label: "Contact", href: "/contact" },
   ];
 
   return (
@@ -39,7 +39,7 @@ export default function Navbar() {
             </Link>
           ))}
           <Link
-            href="/#contact"
+            href="/contact"
             className="rounded-full bg-ink-forest px-4 py-2 text-xs font-medium tracking-wider uppercase text-warm-ivory transition-colors hover:bg-ink-forest/85 focus:outline-none focus:ring-2 focus:ring-ink-forest focus:ring-offset-2"
           >
             Start Project
@@ -101,7 +101,7 @@ export default function Navbar() {
               </Link>
             ))}
             <Link
-              href="/#contact"
+              href="/contact"
               onClick={() => setMobileMenuOpen(false)}
               className="mt-2 inline-flex items-center justify-center rounded-full bg-ink-forest py-2.5 text-xs font-medium uppercase tracking-wider text-warm-ivory transition-colors hover:bg-ink-forest/85"
             >

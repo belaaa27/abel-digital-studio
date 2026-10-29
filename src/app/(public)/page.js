@@ -452,7 +452,7 @@ export default async function Home() {
             </p>
             <div className="pt-4 flex flex-wrap gap-4">
               <a
-                href={contactEmail}
+                href="/contact"
                 className="inline-flex items-center gap-2 rounded-full bg-electric-lime px-8 py-3.5 text-xs font-semibold uppercase tracking-wider text-ink-forest transition-transform hover:scale-105"
               >
                 <span>Start a Project</span>
