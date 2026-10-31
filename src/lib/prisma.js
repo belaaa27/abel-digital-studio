@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "../generated/prisma/client";
 
@@ -18,6 +19,13 @@ function createPrismaClient() {
     user: decodeURIComponent(url.username),
     password: decodeURIComponent(url.password),
     database: url.pathname.slice(1),
+
+    // Verified TiDB Cloud TLS configuration
+    ssl: {
+      ca: readFileSync(new URL("../../certs/isrgrootx1.pem", import.meta.url)),
+      minVersion: "TLSv1.2",
+    },
+
     connectionLimit: 5,
   });
 
