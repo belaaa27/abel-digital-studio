@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "../generated/prisma/client";
+import { join } from "node:path";
 
 const globalForPrisma = globalThis;
 
@@ -22,7 +24,7 @@ function createPrismaClient() {
 
     // Verified TiDB Cloud TLS configuration
     ssl: {
-      ca: readFileSync(new URL("../../certs/isrgrootx1.pem", import.meta.url)),
+      ca: readFileSync(join(process.cwd(), "certs", "isrgrootx1.pem")),
       minVersion: "TLSv1.2",
     },
 

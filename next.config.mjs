@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
   turbopack: {
     rules: {
       "*.css": {
@@ -8,6 +7,10 @@ const nextConfig = {
         as: "*.css",
       },
     },
+  },
+
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./certs/isrgrootx1.pem"],
   },
 };
 
