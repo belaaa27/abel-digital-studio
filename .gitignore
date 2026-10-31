@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+!certs/isrgrootx1.pem
 
 # debug
 npm-debug.log*
