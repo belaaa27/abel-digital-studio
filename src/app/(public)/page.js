@@ -279,7 +279,7 @@ export default async function Home() {
               {/* Right Architectural Diagram Panel */}
               <div className="bg-ink-forest/90 p-8 lg:col-span-5 lg:p-12 border-t lg:border-t-0 lg:border-l border-warm-ivory/10 flex flex-col justify-center">
                 <h4 className="font-mono text-xs uppercase tracking-widest text-electric-lime mb-6">
-                  // Full-Stack Component Diagram
+                  {/* Full-Stack Component Diagram */}
                 </h4>
 
                 <div className="space-y-4">
@@ -440,7 +440,7 @@ export default async function Home() {
         <div className="mx-auto max-w-5xl rounded-3xl border border-ink-forest/20 bg-ink-forest p-10 sm:p-16 text-warm-ivory shadow-xl">
           <div className="max-w-2xl space-y-6">
             <span className="font-mono text-xs uppercase tracking-widest text-electric-lime">
-              // Open for Collaborations
+              {/* Open for Collaborations */}
             </span>
             <h2 className="font-serif text-3xl font-light sm:text-5xl leading-tight">
               Have a digital project or application in mind?

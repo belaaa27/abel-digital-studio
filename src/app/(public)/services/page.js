@@ -402,10 +402,10 @@ export default function ServicesPage() {
         <div className="mx-auto max-w-5xl rounded-3xl border border-ink-forest/20 bg-ink-forest p-10 sm:p-16 text-warm-ivory shadow-xl">
           <div className="max-w-2xl space-y-6">
             <span className="font-mono text-xs uppercase tracking-widest text-electric-lime">
-              // Open for Collaborations
+              {/* Open for Collaborations */}
             </span>
             <h2 className="font-serif text-3xl font-light sm:text-5xl leading-tight">
-              Have a project in mind? Let's discuss what you need.
+              Have a project in mind? Let&apos;s discuss what you need.
             </h2>
             <p className="text-xs sm:text-sm text-warm-ivory/80 leading-relaxed">
               Reach out directly with your project requirements or application
@@ -416,7 +416,7 @@ export default function ServicesPage() {
                 href="/contact"
                 className="group inline-flex items-center gap-2 rounded-full bg-electric-lime px-8 py-3.5 text-xs font-semibold uppercase tracking-wider text-ink-forest transition-transform duration-300 hover:scale-105"
               >
-                <span>Let's Talk</span>
+                <span>Let&apos;s Talk</span>
                 <span className="font-mono transition-transform duration-300 group-hover:translate-x-1">
                   &rarr;
                 </span>

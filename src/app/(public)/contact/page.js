@@ -103,7 +103,7 @@ export default function ContactPage() {
             </div>
 
             <h1 className="font-serif text-4xl font-light leading-[1.1] text-ink-forest sm:text-6xl tracking-tight">
-              Have a project in mind? Let's discuss what you need.
+              Have a project in mind? Let&apos;s discuss what you need.
             </h1>
 
             <p className="text-xs sm:text-sm text-ink-forest/80 leading-relaxed max-w-2xl">
@@ -132,7 +132,7 @@ export default function ContactPage() {
               {status.success ? (
                 <div className="rounded-2xl border border-ink-forest/20 bg-ink-forest p-8 text-warm-ivory space-y-4">
                   <span className="font-mono text-xs uppercase tracking-widest text-electric-lime">
-                    // Inquiry Received
+                    {/* Inquiry Received */}
                   </span>
                   <h3 className="font-serif text-2xl">
                     Thank you for reaching out.
@@ -369,7 +369,7 @@ export default function ContactPage() {
               <div className="rounded-3xl border border-ink-forest/15 bg-white/40 p-8 shadow-sm backdrop-blur-sm space-y-6">
                 <div>
                   <span className="font-mono text-xs uppercase tracking-widest text-ink-forest/60">
-                    // Direct Channels
+                    {/* Direct Channels */}
                   </span>
                   <h3 className="mt-2 font-serif text-2xl text-ink-forest">
                     Connect Directly

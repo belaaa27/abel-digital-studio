@@ -445,10 +445,10 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             <div className="lg:col-span-7 space-y-6">
               <span className="font-mono text-xs uppercase tracking-widest text-electric-lime">
-                // Professional Channels
+                {/* Professional Channels */}
               </span>
               <h2 className="font-serif text-3xl font-light sm:text-4xl leading-tight">
-                Let’s connect and build together.
+                Let&apos;s connect and build together.
               </h2>
               <p className="text-xs sm:text-sm text-warm-ivory/80 leading-relaxed">
                 Have a project in mind, a full-stack web application
