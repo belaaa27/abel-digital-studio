@@ -12,9 +12,39 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "ABEL / DIGITAL — Independent Digital Studio",
+  metadataBase: new URL("https://abel-digital-studio.vercel.app"),
+
+  title: {
+    default: "ABEL / DIGITAL — Independent Digital Studio",
+    template: "%s | ABEL / DIGITAL",
+  },
+
   description:
-    "Ideas into digital experiences. Portfolio, web design, and full-stack web development services by Abel.",
+    "Independent full-stack developer portfolio showcasing modern web applications, digital experiences, and selected development projects.",
+
+  applicationName: "ABEL / DIGITAL",
+
+  openGraph: {
+    title: "ABEL / DIGITAL — Independent Digital Studio",
+    description:
+      "Explore modern web applications, digital experiences, and full-stack development projects by Abel.",
+    url: "https://abel-digital-studio.vercel.app",
+    siteName: "ABEL / DIGITAL",
+    locale: "en_US",
+    type: "website",
+  },
+
+  twitter: {
+    card: "summary",
+    title: "ABEL / DIGITAL — Independent Digital Studio",
+    description:
+      "Explore modern web applications and full-stack development projects by Abel.",
+  },
+
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }) {

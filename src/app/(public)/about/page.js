@@ -1,9 +1,19 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "About — ABEL / DIGITAL",
+  title: "About Abel — Independent Full-Stack Developer",
   description:
-    "Independent full-stack developer and studio practice based in Ethiopia, specializing in web applications and digital products.",
+    "Get to know Abel, an independent full-stack developer from Ethiopia focused on building modern web applications, digital products, and thoughtful user experiences.",
+
+  openGraph: {
+    title: "About Abel — Independent Full-Stack Developer",
+    description:
+      "Learn about Abel's development approach, technical skills, and passion for building modern digital experiences.",
+    url: "/about",
+    siteName: "ABEL / DIGITAL",
+    locale: "en_US",
+    type: "website",
+  },
 };
 
 export default function AboutPage() {
