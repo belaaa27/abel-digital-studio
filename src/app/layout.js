@@ -24,6 +24,10 @@ export const metadata = {
 
   applicationName: "ABEL / DIGITAL",
 
+  verification: {
+    google: "YGevW20-tbHTL8M3w-GiNEMrgTClqT3ArQ9t5TzDRA8",
+  },
+
   openGraph: {
     title: "ABEL / DIGITAL — Independent Digital Studio",
     description:
