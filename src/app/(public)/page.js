@@ -423,11 +423,11 @@ export default async function Home() {
                       </svg>
                     </a>
                   ) : (
-                    <span className="font-mono text-xs uppercase tracking-wider text-ink-forest/40">
+                    <span className="font-mono text-xs uppercase tracking-wider text-ink-forest/70">
                       No Live URL
                     </span>
                   )}
-                  <span className="font-mono text-[11px] text-ink-forest/40">
+                  <span className="font-mono text-[11px] text-ink-forest/70">
                     Live Demo
                   </span>
                 </div>

@@ -27,7 +27,7 @@ export default function Footer() {
 
           {/* Quick Navigation Links */}
           <div className="space-y-3 md:col-span-3">
-            <h3 className="font-mono text-xs uppercase tracking-widest text-ink-forest/50">
+            <h3 className="font-mono text-xs uppercase tracking-widest text-ink-forest/70">
               Navigation
             </h3>
             <ul className="space-y-2 text-xs font-medium">
@@ -76,7 +76,7 @@ export default function Footer() {
 
           {/* Connect / Inquiries */}
           <div className="space-y-3 md:col-span-3">
-            <h3 className="font-mono text-xs uppercase tracking-widest text-ink-forest/50">
+            <h3 className="font-mono text-xs uppercase tracking-widest text-ink-forest/70">
               Inquiries
             </h3>
             <p className="text-xs text-ink-forest/75 leading-relaxed">
